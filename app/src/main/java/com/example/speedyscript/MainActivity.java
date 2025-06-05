@@ -1,34 +1,20 @@
 package com.example.speedyscript;
 
 import androidx.appcompat.app.AppCompatActivity;
-import android.content.Intent;
-import android.database.sqlite.SQLiteDatabase;
 import android.os.Bundle;
-import android.os.CountDownTimer;
 import android.view.View;
 import android.widget.*;
 
 import java.util.Locale;
-import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
     TextView textPrompt, textResult;
     EditText editTextInput;
-    Button buttonStart, buttonHistory;
+    Button buttonStart;
 
     long startTime;
-    CountDownTimer countDownTimer;
-    boolean isTestRunning = false;
-
-    String promptText = "";
-    String[] promptArray = {
-            "Improve your typing speed with this simple Android app!",
-            "Practice typing every day to increase your skills.",
-            "The quick brown fox jumps over the lazy dog.",
-            "Coding is a skill that improves with consistent effort.",
-            "Android development is fun and rewarding."
-    };
+    String promptText = "Improve your typing speed with this simple Android app!";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -39,68 +25,39 @@ public class MainActivity extends AppCompatActivity {
         textResult = findViewById(R.id.textResult);
         editTextInput = findViewById(R.id.editTextInput);
         buttonStart = findViewById(R.id.buttonStart);
-        buttonHistory = findViewById(R.id.buttonHistory);
 
-        editTextInput.setEnabled(false);
+        textPrompt.setText(promptText);
 
-        buttonStart.setOnClickListener(v -> startTest());
-
-        buttonHistory.setOnClickListener(v -> {
-            Intent intent = new Intent(MainActivity.this, HistoryActivity.class);
-            startActivity(intent);
+        buttonStart.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                startTest();
+            }
         });
     }
 
     private void startTest() {
-        // Pick random prompt
-        int randomIndex = new Random().nextInt(promptArray.length);
-        promptText = promptArray[randomIndex];
-        textPrompt.setText(promptText);
-
         editTextInput.setText("");
         editTextInput.setEnabled(true);
         editTextInput.requestFocus();
         textResult.setText("");
         startTime = System.currentTimeMillis();
-        isTestRunning = true;
 
-        Toast.makeText(this, "Typing test started. Time: 60 seconds!", Toast.LENGTH_SHORT).show();
-        startCountdown();
+        Toast.makeText(this, "Typing test started. Begin typing now!", Toast.LENGTH_SHORT).show();
 
-        // Optional: End test if user exits input
+        // Detect when user finishes and presses DONE or outside the field
         editTextInput.setOnFocusChangeListener((v, hasFocus) -> {
-            if (!hasFocus && isTestRunning) {
+            if (!hasFocus) {
                 endTest();
             }
         });
     }
 
-    private void startCountdown() {
-        countDownTimer = new CountDownTimer(60000, 1000) {
-            public void onTick(long millisUntilFinished) {
-                buttonStart.setText("Time Left: " + millisUntilFinished / 1000 + "s");
-            }
-
-            public void onFinish() {
-                if (isTestRunning) {
-                    isTestRunning = false;
-                    endTest();
-                    buttonStart.setText("Start Typing Test");
-                }
-            }
-        }.start();
-    }
-
     private void endTest() {
-        if (countDownTimer != null) {
-            countDownTimer.cancel();
-        }
-
         long endTime = System.currentTimeMillis();
         String userInput = editTextInput.getText().toString().trim();
 
         double timeTakenSec = (endTime - startTime) / 1000.0;
-        if (timeTakenSec == 0) timeTakenSec = 1; // Avoid divide by zero
 
         int wordCount = userInput.isEmpty() ? 0 : userInput.split("\\s+").length;
         int correctWords = 0;
@@ -123,18 +80,5 @@ public class MainActivity extends AppCompatActivity {
 
         textResult.setText(result);
         editTextInput.setEnabled(false);
-        isTestRunning = false;
-
-        saveResultToDatabase(timeTakenSec, wpm, accuracy);
-    }
-
-    private void saveResultToDatabase(double time, double wpm, double accuracy) {
-        TypingResultDatabaseHelper dbHelper = new TypingResultDatabaseHelper(this);
-        SQLiteDatabase db = dbHelper.getWritableDatabase();
-
-        db.execSQL("INSERT INTO Results (timeTaken, wpm, accuracy) VALUES (?, ?, ?)",
-                new Object[]{time, wpm, accuracy});
-
-        db.close();
     }
 }
